@@ -1,0 +1,88 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: stockai
+      POSTGRES_PASSWORD: stockai_pass
+      POSTGRES_DB: stockai
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "5000:5000"
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://stockai:stockai_pass@db:5432/stockai
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app/backend
+    command: gunicorn --worker-class eventlet -w 1 -b 0.0.0.0:5000 --reload "app:create_app()"
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://stockai:stockai_pass@db:5432/stockai
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app/backend
+    command: celery -A celery_worker.celery worker --loglevel=info
+    volumes:
+      - .:/app
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://stockai:stockai_pass@db:5432/stockai
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app/backend
+    command: celery -A celery_worker.celery beat --loglevel=info
+    volumes:
+      - .:/app
+
+volumes:
+  pgdata:

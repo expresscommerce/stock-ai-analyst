@@ -1,0 +1,13 @@
+<!-- AI Query Box Component -->
+<div class="query-container">
+    <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem;">
+        <span style="font-weight:600;">Ask AI Analyst</span>
+    </div>
+    <div class="query-input-wrapper">
+        <input type="text" class="query-input" id="query-input"
+               placeholder="Ask anything about stocks..."
+               onkeydown="if(event.key==='Enter')sendQuery()">
+        <button class="query-btn" onclick="sendQuery()">Analyze</button>
+    </div>
+    <div class="query-response" id="query-response"></div>
+</div>

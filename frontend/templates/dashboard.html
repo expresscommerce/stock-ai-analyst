@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<!-- AI Query Box -->
+<div class="query-container" id="query-section">
+    <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem;">
+        <span style="font-weight:600;">Ask AI Analyst</span>
+        <span class="card-badge positive-bg">Llama 3.3 70B</span>
+    </div>
+    <div class="query-input-wrapper">
+        <input type="text" class="query-input" id="query-input"
+               placeholder="Ask anything about stocks… e.g. 'Why did AAPL drop today?'"
+               onkeydown="if(event.key==='Enter')sendQuery()">
+        <button class="query-btn" id="query-btn" onclick="sendQuery()">
+            <span id="query-btn-text">Analyze</span>
+        </button>
+    </div>
+    <div class="query-response" id="query-response"></div>
+</div>
+
+<!-- Global Indices -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h1 style="font-size:1.3rem; font-weight:700;">Global Markets</h1>
+    <div style="display:flex; align-items:center; gap:.5rem; font-size:.75rem; color:var(--text-muted);">
+        <span class="live-dot"></span> Live · Auto-refresh 5min
+    </div>
+</div>
+<div class="grid grid-5" id="indices-grid">
+    <div class="card skeleton skeleton-card"></div>
+    <div class="card skeleton skeleton-card"></div>
+    <div class="card skeleton skeleton-card"></div>
+    <div class="card skeleton skeleton-card"></div>
+    <div class="card skeleton skeleton-card"></div>
+</div>
+
+<!-- Top Movers Row -->
+<div class="grid grid-2" style="margin-top:1.5rem;">
+    <div class="card" id="gainers-card">
+        <div class="card-header">
+            <div class="card-title">Top Gainers</div>
+            <span class="card-badge positive-bg">Today</span>
+        </div>
+        <table class="stock-table" id="gainers-table"><tbody></tbody></table>
+    </div>
+    <div class="card" id="losers-card">
+        <div class="card-header">
+            <div class="card-title">Top Losers</div>
+            <span class="card-badge negative-bg">Today</span>
+        </div>
+        <table class="stock-table" id="losers-table"><tbody></tbody></table>
+    </div>
+</div>
+
+<!-- Sector Heatmap + Currency + News Row -->
+<div class="grid grid-3" style="margin-top:1.5rem;">
+    <!-- Sector Heatmap -->
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+            <div class="card-title">Sector Performance</div>
+        </div>
+        <div class="heatmap-grid" id="heatmap-grid"></div>
+    </div>
+
+    <!-- Currency Converter -->
+    <div class="card" id="currency-widget">
+        <div class="card-header">
+            <div class="card-title">Currency Converter</div>
+        </div>
+        <div class="converter-row">
+            <input type="number" class="converter-input" id="conv-amount" value="1" min="0" step="0.01" style="width:80px;" oninput="convertCurrency()">
+            <select class="converter-select" id="conv-from" onchange="convertCurrency()">
+                <option value="USD">USD</option><option value="EUR">EUR</option>
+                <option value="GBP">GBP</option><option value="PKR">PKR</option>
+                <option value="JPY">JPY</option><option value="AED">AED</option>
+                <option value="SAR">SAR</option><option value="CAD">CAD</option>
+                <option value="AUD">AUD</option>
+            </select>
+            <span style="color:var(--text-muted);">→</span>
+            <select class="converter-select" id="conv-to" onchange="convertCurrency()">
+                <option value="PKR">PKR</option><option value="EUR">EUR</option>
+                <option value="GBP">GBP</option><option value="USD">USD</option>
+                <option value="JPY">JPY</option><option value="AED">AED</option>
+                <option value="SAR">SAR</option><option value="CAD">CAD</option>
+                <option value="AUD">AUD</option>
+            </select>
+        </div>
+        <div class="converter-result" id="conv-result">—</div>
+        <div id="rates-list" style="margin-top:1rem;"></div>
+    </div>
+</div>
+
+<!-- News Feed + AI Briefing + Watchlist -->
+<div class="grid grid-3" style="margin-top:1.5rem;">
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+            <div class="card-title">Latest Financial News</div>
+        </div>
+        <div id="news-feed">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-text" style="width:60%"></div>
+            <div class="skeleton skeleton-text" style="width:90%"></div>
+        </div>
+    </div>
+    <div>
+        <div class="card" style="margin-bottom:1.25rem;">
+            <div class="card-header">
+                <div class="card-title">Today's AI Briefing</div>
+            </div>
+            <div id="daily-briefing" class="ai-analysis" style="font-size:.82rem;">
+                <em style="color:var(--text-muted);">Loading briefing...</em>
+            </div>
+        </div>
+        <!-- Alerts -->
+        <div class="card" id="alerts-section">
+            <div class="card-header">
+                <div class="card-title">Price Alerts</div>
+            </div>
+            <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+                <input type="text" class="converter-input" id="alert-ticker" placeholder="AAPL" style="width:70px;text-transform:uppercase;">
+                <select class="converter-select" id="alert-type">
+                    <option value="price_above">Price Above</option>
+                    <option value="price_below">Price Below</option>
+                </select>
+                <input type="number" class="converter-input" id="alert-value" placeholder="150" style="width:80px;">
+                <button class="query-btn" style="padding:.5rem .75rem;font-size:.75rem;" onclick="createAlert()">Set</button>
+            </div>
+            <div id="alerts-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Watchlist -->
+<div class="card" style="margin-top:1.5rem;">
+    <div class="card-header">
+        <div class="card-title">My Watchlist</div>
+        <div style="display:flex;gap:.5rem;">
+            <input type="text" class="converter-input" id="watchlist-add-input" placeholder="Add ticker..." style="width:100px;text-transform:uppercase;">
+            <button class="query-btn" style="padding:.4rem .75rem;font-size:.75rem;" onclick="addToWatchlist()">Add</button>
+        </div>
+    </div>
+    <div class="watchlist-grid" id="watchlist-grid">
+        <div style="color:var(--text-muted);font-size:.85rem;padding:1rem;text-align:center;">
+            Add tickers to your watchlist to track them here.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/query.js') }}"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { initDashboard(); });</script>
+{% endblock %}

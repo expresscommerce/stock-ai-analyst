@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ ticker }} — Stock Detail{% endblock %}
+{% block content %}
+<div id="stock-page" data-ticker="{{ ticker }}">
+    <!-- Hero -->
+    <div class="stock-hero" id="stock-hero">
+        <div>
+            <div style="display:flex;align-items:center;gap:.75rem;">
+                <h1 style="font-size:1.5rem;font-weight:800;">{{ ticker }}</h1>
+                <button class="query-btn" style="padding:.3rem .7rem;font-size:.7rem;" onclick="toggleWatchlistFromDetail('{{ ticker }}')">
+                    Watchlist
+                </button>
+            </div>
+            <div class="stock-hero-name" id="stock-name">Loading...</div>
+        </div>
+        <div style="text-align:right;">
+            <div class="stock-hero-price" id="stock-price">—</div>
+            <div class="stock-hero-change" id="stock-change">—</div>
+        </div>
+    </div>
+
+    <!-- Chart + Period Tabs -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+            <div class="card-title">Price Chart</div>
+            <div class="period-tabs" id="period-tabs">
+                <span class="period-tab" data-period="1d">1D</span>
+                <span class="period-tab" data-period="5d">1W</span>
+                <span class="period-tab active" data-period="1mo">1M</span>
+                <span class="period-tab" data-period="3mo">3M</span>
+                <span class="period-tab" data-period="1y">1Y</span>
+            </div>
+        </div>
+        <div class="chart-container" style="height:350px;">
+            <canvas id="price-chart"></canvas>
+        </div>
+        <div class="chart-container" style="height:120px;margin-top:.5rem;">
+            <canvas id="volume-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Key Stats + Technical Row -->
+    <div class="grid grid-2" style="margin-bottom:1.5rem;">
+        <div class="card">
+            <div class="card-header"><div class="card-title">Key Statistics</div></div>
+            <div class="stat-grid" id="stats-grid"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-title">Technical Indicators</div></div>
+            <div class="indicator-grid" id="indicators-grid"></div>
+        </div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+            <div class="card-title">AI Stock Analysis</div>
+            <button class="query-btn" style="padding:.35rem .75rem;font-size:.75rem;" onclick="loadAnalysis('{{ ticker }}')">
+                Refresh Analysis
+            </button>
+        </div>
+        <div class="ai-analysis" id="ai-analysis">
+            <div class="ai-badge">AI Powered</div>
+            <div id="ai-analysis-content" style="white-space:pre-wrap;">
+                <em style="color:var(--text-muted);">Click "Refresh Analysis" to generate AI insights for {{ ticker }}...</em>
+            </div>
+        </div>
+    </div>
+
+    <!-- News for this ticker -->
+    <div class="card">
+        <div class="card-header"><div class="card-title">Related News</div></div>
+        <div id="stock-news">
+            <div style="color:var(--text-muted);font-size:.85rem;padding:.5rem;">Loading news...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/query.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ticker = document.getElementById('stock-page').dataset.ticker;
+    loadStockDetail(ticker);
+});
+</script>
+{% endblock %}

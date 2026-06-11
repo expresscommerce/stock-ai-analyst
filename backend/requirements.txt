@@ -1,0 +1,35 @@
+# Flask & Extensions
+Flask==3.1.1
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-SocketIO==5.5.1
+Flask-Cors==5.0.1
+
+# Database
+psycopg2-binary==2.9.10
+pgvector==0.3.6
+SQLAlchemy==2.0.40
+
+# Celery & Redis
+celery[redis]==5.4.0
+redis==5.2.1
+
+# AI & ML
+openai==1.82.0
+numpy>=1.26.4
+
+# Stock Data
+yfinance==0.2.54
+pandas>=2.2.3
+pandas-ta
+
+# News
+requests==2.32.3
+
+# WebSockets
+eventlet==0.37.0
+gevent==24.11.1
+
+# Utilities
+python-dotenv==1.1.0
+gunicorn==23.0.0

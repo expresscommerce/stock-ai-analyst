@@ -1,0 +1,15 @@
+<!-- News Feed Component -->
+<div id="news-feed-component">
+    {% for article in articles %}
+    <div class="news-item">
+        <div class="news-sentiment {{ 'pos' if article.sentiment_label == 'positive' else 'neg' if article.sentiment_label == 'negative' else 'neu' }}"></div>
+        <div>
+            <div class="news-title"><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></div>
+            <div class="news-meta">
+                <span>{{ article.source }}</span>
+                <span>{{ article.published_at }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>

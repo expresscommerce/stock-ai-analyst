@@ -1,0 +1,22 @@
+# Local configuration
+.env
+
+# Python build and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Celerybeat schedule database
+celerybeat-schedule
+
+# IDE settings
+.vscode/
+.idea/
+.DS_Store

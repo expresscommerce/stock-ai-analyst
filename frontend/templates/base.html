@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered global stock market analyst with real-time data, technical analysis, and intelligent insights powered by Llama 3.3">
+    <title>{% block title %}StockAI Analyst{% endblock %} — Global Market Intelligence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+    <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo"><span style="color:#fff;font-weight:800;font-size:1.1rem;">AI</span></div>
+                <div>
+                    <div class="sidebar-title">StockAI</div>
+                    <div class="sidebar-subtitle">Market Intelligence</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Main</div>
+                <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}" id="nav-dashboard">
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item" id="nav-search" onclick="document.getElementById('query-input')?.focus()">
+                    AI Search
+                </a>
+                <div class="nav-section-title">Markets</div>
+                <a href="/stock/AAPL" class="nav-item">Apple</a>
+                <a href="/stock/MSFT" class="nav-item">Microsoft</a>
+                <a href="/stock/NVDA" class="nav-item">NVIDIA</a>
+                <a href="/stock/TSLA" class="nav-item">Tesla</a>
+                <a href="/stock/GOOGL" class="nav-item">Google</a>
+                <div class="nav-section-title">Watchlist</div>
+                <div id="sidebar-watchlist"></div>
+                <div class="nav-section-title">Tools</div>
+                <a href="#currency-widget" class="nav-item">Currency</a>
+                <a href="#alerts-section" class="nav-item">Alerts</a>
+            </nav>
+            <div style="padding: 1rem; border-top: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: .65rem; color: var(--text-muted);">
+                    Powered by <strong>Llama 3.3 70B</strong><br>
+                    <span class="live-dot"></span> Live Data
+                </div>
+            </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <div class="toast-container" id="toast-container"></div>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
