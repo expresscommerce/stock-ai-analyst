@@ -58,12 +58,15 @@ def process_query():
 
     # Step 4: Get AI answer
     if stream:
-        def generate():
+        from typing import Iterator
+
+        def generate() -> Iterator[str]:
             for chunk in stream_answer(question, full_context):
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
 
         return Response(
+            # pyrefly: ignore [no-matching-overload]
             stream_with_context(generate()),
             mimetype="text/event-stream",
             headers={

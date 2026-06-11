@@ -1,29 +1,21 @@
 /* ═══════════════════════════════════════════════
-   Chart.js — Price charts, volume, sparklines
+   TradingView Lightweight Charts Integration
    ═══════════════════════════════════════════════ */
 
-let priceChart = null;
-let volumeChart = null;
+let tvChart = null;
+let candlestickSeries = null;
+let volumeSeries = null;
+let smaSeries = null;
 
 const chartColors = {
-    green: '#10b981', red: '#ef4444', blue: '#2563eb', cyan: '#0891b2',
-    gridColor: '#f1f5f9', textColor: '#64748b',
-};
-
-const defaultChartOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: {
-        backgroundColor: '#ffffff', titleColor: '#0f172a', bodyColor: '#475569',
-        borderColor: '#e2e8f0', borderWidth: 1, padding: 10, cornerRadius: 8,
-        titleFont: { family: "'JetBrains Mono', monospace", size: 12 },
-        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
-    }},
-    scales: {
-        x: { grid: { color: chartColors.gridColor, drawBorder: false }, ticks: { color: chartColors.textColor, font: { size: 10 }, maxTicksLimit: 8 } },
-        y: { grid: { color: chartColors.gridColor, drawBorder: false }, ticks: { color: chartColors.textColor, font: { family: "'JetBrains Mono', monospace", size: 10 } }, position: 'right' },
-    },
-    interaction: { intersect: false, mode: 'index' },
-    animation: { duration: 800, easing: 'easeOutQuart' },
+    green: '#10b981',
+    red: '#ef4444',
+    volumeGreen: 'rgba(16, 185, 129, 0.4)',
+    volumeRed: 'rgba(239, 68, 68, 0.4)',
+    smaLine: '#2563eb',
+    gridColor: '#f8fafc',
+    textColor: '#475569',
+    borderColor: '#e2e8f0',
 };
 
 // ── Load Stock Detail Page ──
@@ -97,7 +89,35 @@ function renderStockNews(news) {
     }).join('');
 }
 
-// ── Price Chart ──
+// ── Parse Date helper for TV scale ──
+function parseDateToTime(dateStr) {
+    // If it contains space or time colon, parse as Unix timestamp
+    const hasTime = dateStr.includes(':') || dateStr.includes(' ') || dateStr.includes('T');
+    if (hasTime) {
+        return Math.floor(new Date(dateStr).getTime() / 1000);
+    }
+    // Else return YYYY-MM-DD
+    return dateStr.split(' ')[0];
+}
+
+// ── Calculate Simple Moving Average ──
+function calculateSMA(data, count) {
+    const r = [];
+    for (let i = 0; i < data.length; i++) {
+        if (i < count - 1) continue;
+        let sum = 0.0;
+        for (let j = 0; j < count; j++) {
+            sum += data[i - j].close;
+        }
+        r.push({
+            time: data[i].time,
+            value: sum / count
+        });
+    }
+    return r;
+}
+
+// ── TradingView Price Chart ──
 async function loadPriceChart(ticker, period) {
     try {
         const res = await fetch(`/api/stock/${ticker}/history/${period}`);
@@ -105,51 +125,195 @@ async function loadPriceChart(ticker, period) {
         const hist = data.history || [];
         if (!hist.length) return;
 
-        const labels = hist.map(h => h.date);
-        const closes = hist.map(h => h.close);
-        const volumes = hist.map(h => h.volume);
-        const isUp = closes[closes.length - 1] >= closes[0];
-        const lineColor = isUp ? chartColors.green : chartColors.red;
+        const container = document.getElementById('tv-chart-container');
+        const tooltip = document.getElementById('tv-chart-tooltip');
+        if (!container) return;
 
-        // Price chart
-        const ctx = document.getElementById('price-chart');
-        if (!ctx) return;
-        if (priceChart) priceChart.destroy();
-        priceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    data: closes, borderColor: lineColor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4,
-                    fill: true, backgroundColor: (context) => {
-                        const g = context.chart.ctx.createLinearGradient(0, 0, 0, 350);
-                        g.addColorStop(0, lineColor + '30'); g.addColorStop(1, lineColor + '00');
-                        return g;
-                    }, tension: 0.3,
-                }],
+        // Reset container contents
+        container.innerHTML = '';
+
+        // Initialize Lightweight Chart
+        tvChart = LightweightCharts.createChart(container, {
+            width: container.clientWidth,
+            height: container.clientHeight || 420,
+            layout: {
+                background: { type: 'solid', color: '#ffffff' },
+                textColor: chartColors.textColor,
+                fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             },
-            options: { ...defaultChartOptions },
+            grid: {
+                vertLines: { color: chartColors.gridColor },
+                horzLines: { color: chartColors.gridColor },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+                vertLine: {
+                    width: 1,
+                    color: '#94a3b8',
+                    style: LightweightCharts.LineStyle.Dashed,
+                },
+                horzLine: {
+                    width: 1,
+                    color: '#94a3b8',
+                    style: LightweightCharts.LineStyle.Dashed,
+                },
+            },
+            rightPriceScale: {
+                borderColor: chartColors.borderColor,
+                scaleMargins: {
+                    top: 0.1,
+                    bottom: 0.25,
+                },
+            },
+            timeScale: {
+                borderColor: chartColors.borderColor,
+                timeVisible: true,
+                secondsVisible: false,
+            },
         });
 
-        // Volume chart
-        const vctx = document.getElementById('volume-chart');
-        if (!vctx) return;
-        if (volumeChart) volumeChart.destroy();
-        const volColors = hist.map((h, i) => i === 0 ? chartColors.blue + '60' : h.close >= hist[i - 1].close ? chartColors.green + '60' : chartColors.red + '60');
-        volumeChart = new Chart(vctx, {
-            type: 'bar',
-            data: { labels, datasets: [{ data: volumes, backgroundColor: volColors, borderRadius: 2 }] },
-            options: { ...defaultChartOptions, scales: { ...defaultChartOptions.scales, y: { ...defaultChartOptions.scales.y, ticks: { ...defaultChartOptions.scales.y.ticks, callback: v => fmtLarge(v) } } } },
+        // 1. Candlestick Series
+        candlestickSeries = tvChart.addSeries(LightweightCharts.CandlestickSeries, {
+            upColor: chartColors.green,
+            downColor: chartColors.red,
+            borderUpColor: chartColors.green,
+            borderDownColor: chartColors.red,
+            wickUpColor: chartColors.green,
+            wickDownColor: chartColors.red,
         });
-    } catch (e) { console.error('Chart error:', e); }
+
+        // 2. Volume Series (Overlay)
+        volumeSeries = tvChart.addSeries(LightweightCharts.HistogramSeries, {
+            color: chartColors.volumeGreen,
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: '', // Overlay series
+        });
+
+        volumeSeries.priceScale().applyOptions({
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0,
+            },
+        });
+
+        // 3. SMA 20 Overlay Line
+        smaSeries = tvChart.addSeries(LightweightCharts.LineSeries, {
+            color: chartColors.smaLine,
+            lineWidth: 1.5,
+            title: 'SMA 20',
+        });
+
+        // Process data
+        const chartData = [];
+        const volumeData = [];
+
+        hist.forEach((h, i) => {
+            const timeVal = parseDateToTime(h.date);
+            
+            // Build data point
+            chartData.push({
+                time: timeVal,
+                open: h.open,
+                high: h.high,
+                low: h.low,
+                close: h.close
+            });
+
+            // Determine volume color matching the candle color
+            const isUp = h.close >= h.open;
+            volumeData.push({
+                time: timeVal,
+                value: h.volume,
+                color: isUp ? chartColors.volumeGreen : chartColors.volumeRed
+            });
+        });
+
+        // Set series data
+        candlestickSeries.setData(chartData);
+        volumeSeries.setData(volumeData);
+
+        // Calculate and set SMA 20
+        const smaData = calculateSMA(chartData, 20);
+        smaSeries.setData(smaData);
+
+        // Fit time scale to show all data
+        tvChart.timeScale().fitContent();
+
+        // ── Hover Tooltip Event Handler ──
+        tvChart.subscribeCrosshairMove(param => {
+            if (!tooltip) return;
+
+            if (
+                param.point === undefined ||
+                !param.time ||
+                param.point.x < 0 ||
+                param.point.x > container.clientWidth ||
+                param.point.y < 0 ||
+                param.point.y > container.clientHeight
+            ) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            const candle = param.seriesData.get(candlestickSeries);
+            const volume = param.seriesData.get(volumeSeries);
+
+            if (!candle) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            const isUp = candle.close >= candle.open;
+            const priceColor = isUp ? chartColors.green : chartColors.red;
+            const sign = isUp ? '+' : '';
+            const diff = candle.close - candle.open;
+            const pct = ((diff / candle.open) * 100).toFixed(2);
+
+            let timeString = '';
+            if (typeof param.time === 'object') {
+                timeString = `${param.time.year}-${String(param.time.month).padStart(2, '0')}-${String(param.time.day).padStart(2, '0')}`;
+            } else {
+                const date = new Date(param.time * 1000);
+                timeString = date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+            }
+
+            tooltip.style.display = 'block';
+            tooltip.innerHTML = `
+                <span style="font-weight: 700; margin-right: 8px; color: var(--text-primary);">${timeString}</span>
+                O: <span style="color: ${priceColor}; font-weight: 600;">${candle.open.toFixed(2)}</span>
+                H: <span style="color: ${priceColor}; font-weight: 600;">${candle.high.toFixed(2)}</span>
+                L: <span style="color: ${priceColor}; font-weight: 600;">${candle.low.toFixed(2)}</span>
+                C: <span style="color: ${priceColor}; font-weight: 600;">${candle.close.toFixed(2)}</span>
+                Chg: <span style="color: ${priceColor}; font-weight: 600;">${sign}${diff.toFixed(2)} (${sign}${pct}%)</span>
+                Vol: <span style="color: var(--text-secondary); font-weight: 600;">${fmtLarge(volume ? volume.value : 0)}</span>
+            `;
+        });
+
+        // ── Resize Handler ──
+        const resizeObserver = new ResizeObserver(entries => {
+            if (entries.length === 0 || !entries[0].contentRect) return;
+            const { width, height } = entries[0].contentRect;
+            tvChart.applyOptions({ width, height });
+        });
+        resizeObserver.observe(container);
+
+    } catch (e) {
+        console.error('Chart error:', e);
+    }
 }
 
 function setupPeriodTabs(ticker) {
     document.querySelectorAll('.period-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
+        // Remove old event listener clones if any
+        const newTab = tab.cloneNode(true);
+        tab.parentNode.replaceChild(newTab, tab);
+        
+        newTab.addEventListener('click', () => {
             document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            loadPriceChart(ticker, tab.dataset.period);
+            newTab.classList.add('active');
+            loadPriceChart(ticker, newTab.dataset.period);
         });
     });
 }

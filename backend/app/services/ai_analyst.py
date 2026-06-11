@@ -41,6 +41,7 @@ def _get_client() -> OpenAI:
     return OpenAI(
         api_key=current_app.config["DEEPINFRA_API_KEY"],
         base_url=current_app.config["DEEPINFRA_BASE_URL"],
+        timeout=15.0,  # 15 seconds timeout to prevent hanging on network/DNS failure
     )
 
 

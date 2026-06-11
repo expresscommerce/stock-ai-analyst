@@ -9,6 +9,7 @@ from app.services.technical import get_technical_indicators, get_indicator_summa
 from app.services.ai_analyst import analyze_stock
 from app.services.rag_pipeline import similarity_search
 
+
 logger = logging.getLogger(__name__)
 
 stock_bp = Blueprint("stock", __name__)
@@ -34,14 +35,24 @@ def stock_data(ticker):
     # Technical indicators
     tech = get_technical_indicators(ticker)
 
-    # Recent news for this ticker
+    # Recent news for this ticker (fallback to live fetch if empty)
     news = get_recent_news(limit=5, ticker=ticker)
+    if not news:
+        try:
+            from app.services.news_fetcher import fetch_ticker_news, store_articles
+            live_news = fetch_ticker_news(ticker, page_size=5)
+            if live_news:
+                store_articles(live_news, tickers=[ticker])
+                news = get_recent_news(limit=5, ticker=ticker)
+        except Exception as e:
+            logger.error(f"Error fetching live ticker news for {ticker}: {e}")
 
-    return jsonify({
+    res_data = {
         "stock": data,
         "technical": tech,
         "news": news,
-    })
+    }
+    return jsonify(res_data)
 
 
 @stock_bp.route("/api/stock/<ticker>/history/<period>")
@@ -63,7 +74,8 @@ def stock_history(ticker, period):
     interval = interval_map.get(period, "1d")
     history = fetch_history(ticker, period=period, interval=interval)
 
-    return jsonify({"history": history, "period": period})
+    res_data = {"history": history, "period": period}
+    return jsonify(res_data)
 
 
 @stock_bp.route("/api/stock/<ticker>/analysis")

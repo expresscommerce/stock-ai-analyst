@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 
 from app.services.stock_fetcher import fetch_history
 from app.services.technical import get_technical_indicators
+from app.extensions import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ charts_bp = Blueprint("charts", __name__)
 
 
 @charts_bp.route("/charts/history")
+@limiter.limit("30 per minute")
 def chart_history():
     """Get historical data for multiple tickers (for heatmap/comparison)."""
     tickers = request.args.get("tickers", "").split(",")
@@ -30,6 +32,7 @@ def chart_history():
 
 
 @charts_bp.route("/charts/sector-heatmap")
+@limiter.limit("10 per minute")
 def sector_heatmap():
     """Get sector performance data for heatmap visualization."""
     # Sector ETFs as proxies
@@ -64,6 +67,7 @@ def sector_heatmap():
 
 
 @charts_bp.route("/charts/technical/<ticker>")
+@limiter.limit("30 per minute")
 def chart_technical(ticker):
     """Get technical indicator data for chart overlays."""
     ticker = ticker.upper()

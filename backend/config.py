@@ -1,6 +1,7 @@
 """Application configuration."""
 
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 from celery.schedules import crontab
 
@@ -16,6 +17,9 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Sentry DSN
+    SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
     # Redis
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -29,11 +33,11 @@ class Config:
         },
         "fetch-news": {
             "task": "app.tasks.fetch_news.run",
-            "schedule": crontab(minute=0),
+            "schedule": crontab(minute="0"),
         },
         "daily-report": {
             "task": "app.tasks.daily_report.run",
-            "schedule": crontab(hour=9, minute=0),
+            "schedule": crontab(hour="9", minute="0"),
         },
     }
 

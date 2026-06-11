@@ -33,6 +33,9 @@ services:
       dockerfile: backend/Dockerfile
     ports:
       - "5000:5000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file: ./backend/.env
     environment:
       - DATABASE_URL=postgresql://stockai:stockai_pass@db:5432/stockai
@@ -52,6 +55,9 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file: ./backend/.env
     environment:
       - DATABASE_URL=postgresql://stockai:stockai_pass@db:5432/stockai
@@ -70,6 +76,9 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file: ./backend/.env
     environment:
       - DATABASE_URL=postgresql://stockai:stockai_pass@db:5432/stockai

@@ -3,23 +3,28 @@
 from flask_sqlalchemy import SQLAlchemy  # type: ignore
 from flask_migrate import Migrate  # type: ignore
 from flask_socketio import SocketIO  # type: ignore
+from flask_limiter import Limiter  # type: ignore
+from flask_limiter.util import get_remote_address  # type: ignore
 from celery import Celery  # type: ignore
-import redis as redis_lib  # type: ignore
 
 db = SQLAlchemy()
 migrate = Migrate()
 socketio = SocketIO(cors_allowed_origins="*", async_mode="eventlet")
 celery = Celery()
-redis_client = None
+
+# Rate limiter using client IP
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "60 per hour"]
+)
 
 
-def init_redis(flask_app):
-    """Initialize Redis client."""
-    global redis_client
-    redis_client = redis_lib.from_url(
-        flask_app.config["REDIS_URL"], decode_responses=True
-    )
-    return redis_client
+
+
+def init_limiter(flask_app):
+    """Initialize Limiter with Redis storage."""
+    limiter.storage_uri = flask_app.config["REDIS_URL"]
+    limiter.init_app(flask_app)
 
 
 def init_celery(flask_app):
@@ -43,8 +48,8 @@ def init_celery(flask_app):
     celery.Task = ContextTask
 
     # Import tasks to register them with Celery
-    import app.tasks.fetch_prices  # noqa: F401
-    import app.tasks.fetch_news  # noqa: F401
-    import app.tasks.daily_report  # noqa: F401
+    import app.tasks.fetch_prices  # type: ignore # noqa: F401
+    import app.tasks.fetch_news  # type: ignore # noqa: F401
+    import app.tasks.daily_report  # type: ignore # noqa: F401
 
     return celery

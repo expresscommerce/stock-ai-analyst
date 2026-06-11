@@ -48,8 +48,17 @@ def dashboard_data():
             "losers": sorted_live[:5],
         }
 
-    # Recent news
+    # Recent news (fallback to live fetch if empty)
     news = get_recent_news(limit=10)
+    if not news:
+        try:
+            from app.services.news_fetcher import fetch_general_news, store_articles
+            live_news = fetch_general_news(page_size=10)
+            if live_news:
+                store_articles(live_news)
+                news = get_recent_news(limit=10)
+        except Exception as e:
+            logger.error(f"Error fetching live general news: {e}")
 
     # Exchange rates
     rates = get_exchange_rates("USD")

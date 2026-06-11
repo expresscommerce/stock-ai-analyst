@@ -1,17 +1,32 @@
 """Flask application factory."""
 
 import os
+# pyrefly: ignore [missing-import]
+import sentry_sdk
+# pyrefly: ignore [missing-import]
+from sentry_sdk.integrations.flask import FlaskIntegration
 from flask import Flask
 from flask_cors import CORS
 
 from config import config_map
-from app.extensions import db, migrate, socketio, init_redis, init_celery
+from app.extensions import db, migrate, socketio, init_limiter, init_celery
 
 
 def create_app(config_name=None):
     """Create and configure the Flask application."""
     if config_name is None:
         config_name = os.getenv("FLASK_ENV", "development")
+
+    config_obj = config_map.get(config_name, config_map["development"])
+
+    # Initialize Sentry if DSN is set
+    if config_obj.SENTRY_DSN:
+        sentry_sdk.init(
+            dsn=config_obj.SENTRY_DSN,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=1.0,
+            profiles_sample_rate=1.0,
+        )
 
     # Determine paths for split frontend/backend directory layout
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,17 +38,16 @@ def create_app(config_name=None):
         static_folder=os.path.join(project_root, "frontend", "static"),
         static_url_path="/static",
     )
-    app.config.from_object(config_map.get(config_name, config_map["development"]))
+    app.config.from_object(config_obj)
 
     # Initialize extensions
     CORS(app)
     db.init_app(app)
     migrate.init_app(app, db)
     socketio.init_app(app)
-    init_redis(app)
+    init_limiter(app)
     init_celery(app)
 
-    # Register blueprints
     from app.routes.dashboard import dashboard_bp
     from app.routes.stock import stock_bp
     from app.routes.query import query_bp
@@ -56,6 +70,12 @@ def create_app(config_name=None):
             db.session.rollback()
 
         from app.models import stock, news, embedding, alert, report  # noqa: F401
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            db.session.rollback()
+            # Suppress concurrent creation errors
+            pass
 
     return app
+
